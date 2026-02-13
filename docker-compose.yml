@@ -1,0 +1,58 @@
+services:
+  ip-service:
+    build: .
+    restart: unless-stopped
+    expose:
+      - "8080"
+    labels:
+      - "traefik.enable=true"
+
+      # --- v4.ryou.online ---
+      - "traefik.http.routers.ip-v4.rule=Host(`v4.ryou.online`)"
+      - "traefik.http.routers.ip-v4.entrypoints=websecure"
+      - "traefik.http.routers.ip-v4.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ip-v4.middlewares=ratelimit@docker"
+      - "traefik.http.routers.ip-v4.service=ip-svc"
+
+      # --- v6.ryou.online ---
+      - "traefik.http.routers.ip-v6.rule=Host(`v6.ryou.online`)"
+      - "traefik.http.routers.ip-v6.entrypoints=websecure"
+      - "traefik.http.routers.ip-v6.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ip-v6.middlewares=ratelimit@docker"
+      - "traefik.http.routers.ip-v6.service=ip-svc"
+
+      # --- Shared service ---
+      - "traefik.http.services.ip-svc.loadbalancer.server.port=8080"
+
+      # --- Rate limiting: 30 req/s average, burst of 50 ---
+      - "traefik.http.middlewares.ratelimit.ratelimit.average=30"
+      - "traefik.http.middlewares.ratelimit.ratelimit.burst=50"
+      - "traefik.http.middlewares.ratelimit.ratelimit.period=1s"
+
+  traefik:
+    image: traefik:v3.3
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    labels:
+      - "traefik.enable=true"
+
+      # --- ryou.online → ryou.onl redirect ---
+      - "traefik.http.routers.redirect-ryou.rule=Host(`ryou.online`)"
+      - "traefik.http.routers.redirect-ryou.entrypoints=websecure"
+      - "traefik.http.routers.redirect-ryou.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.redirect-ryou.middlewares=redirect-to-onl@docker"
+      - "traefik.http.routers.redirect-ryou.service=noop@internal"
+      - "traefik.http.middlewares.redirect-to-onl.redirectregex.regex=^https://ryou\\.online(.*)"
+      - "traefik.http.middlewares.redirect-to-onl.redirectregex.replacement=https://ryou.onl$${1}"
+      - "traefik.http.middlewares.redirect-to-onl.redirectregex.permanent=true"
+    depends_on:
+      - ip-service
+
+volumes:
+  letsencrypt:
