@@ -39,6 +39,7 @@ services:
       - letsencrypt:/letsencrypt
     labels:
       - "traefik.enable=true"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
       # --- ryou.online → ryou.onl redirect ---
       - "traefik.http.routers.redirect-ryou.rule=Host(`ryou.online`)"
