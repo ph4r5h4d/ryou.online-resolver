@@ -7,21 +7,18 @@ services:
     labels:
       - "traefik.enable=true"
 
-      # --- Real IP extraction middleware (must be before rate limit) ---
-      - "traefik.http.middlewares.realip.headerfield=X-Forwarded-For"
-
       # --- v4.ryou.online ---
       - "traefik.http.routers.ip-v4.rule=Host(`v4.ryou.online`)"
       - "traefik.http.routers.ip-v4.entrypoints=websecure"
       - "traefik.http.routers.ip-v4.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.ip-v4.middlewares=ratelimit@docker,realip@docker"
+      - "traefik.http.routers.ip-v4.middlewares=ratelimit@docker"
       - "traefik.http.routers.ip-v4.service=ip-svc"
 
       # --- v6.ryou.online ---
       - "traefik.http.routers.ip-v6.rule=Host(`v6.ryou.online`)"
       - "traefik.http.routers.ip-v6.entrypoints=websecure"
       - "traefik.http.routers.ip-v6.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.ip-v6.middlewares=ratelimit@docker,realip@docker"
+      - "traefik.http.routers.ip-v6.middlewares=ratelimit@docker"
       - "traefik.http.routers.ip-v6.service=ip-svc"
 
       # --- Shared service ---
@@ -35,9 +32,7 @@ services:
   traefik:
     image: traefik:v3.6
     restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
+    network_mode: host
     volumes:
       - ./traefik.yml:/etc/traefik/traefik.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
